@@ -1,14 +1,15 @@
 package com.example.QuizApp.controller;
 
 import com.example.QuizApp.config.JwtUtil;
-import com.example.QuizApp.dto.JwtResponse;
-import com.example.QuizApp.dto.LoginRequest;
-import com.example.QuizApp.dto.SignupRequest;
+import com.example.QuizApp.dto.*;
 import com.example.QuizApp.model.BlacklistedToken;
+import com.example.QuizApp.model.PasswordResetToken;
 import com.example.QuizApp.model.Role;
 import com.example.QuizApp.model.User;
+import com.example.QuizApp.repository.PasswordResetTokenRepository;
 import com.example.QuizApp.repository.TokenBlacklistRepository;
 import com.example.QuizApp.repository.UserRepository;
+import com.example.QuizApp.service.EmailService;
 import lombok.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,8 +20,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.UUID;
+
 import jakarta.validation.Valid;
 
 @RestController
@@ -30,9 +34,12 @@ public class AuthController {
 
     @Autowired
     private UserRepository userRepository;
-
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+    @Autowired
+    private EmailService emailService;
 
     private final AuthenticationManager authManager;
     private final JwtUtil jwtUtil;
@@ -76,13 +83,63 @@ public class AuthController {
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
+
             if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                String token = jwtUtil.generateToken(user.getUsername()); // use username in token
-                return ResponseEntity.ok(new JwtResponse(token));
+                // ✅ Load full UserDetails object
+                UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+
+                String token = jwtUtil.generateToken(userDetails);
+                return ResponseEntity.ok(new AuthResponse(token));
             }
         }
 
+
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+    }
+
+
+    //pass reset functionality (POST /auth/request-reset?email=youruser@example.com)
+    @PostMapping("/request-reset")
+    public String requestPasswordReset(@RequestParam String email) {
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return "No user found with this email";
+        }
+
+        // Optional: delete old tokens
+        passwordResetTokenRepository.deleteByEmail(email);
+
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .email(email)
+                .token(token)
+                .expiryDate(LocalDateTime.now().plusMinutes(15))
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+        emailService.sendPasswordResetEmail(email, token);
+
+        return "Password reset link sent to your email";
+    }
+
+    @PostMapping("/reset-password")
+    public String resetPassword(@RequestBody PasswordResetRequest request) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new RuntimeException("Invalid or expired token"));
+
+        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            return "Token has expired";
+        }
+
+        User user = userRepository.findByEmail(resetToken.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        passwordResetTokenRepository.delete(resetToken); // Remove token after use
+
+        return "Password successfully reset. Please log in with your new password.";
     }
 
 
