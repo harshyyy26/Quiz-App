@@ -50,7 +50,7 @@ public class AuthController {
 
     //singup functionality
     @PostMapping("/signup")
-    public ResponseEntity<String> signup(@Valid @RequestBody SignupRequest request) {
+    public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             return ResponseEntity.badRequest().body("Username already exists");
         }
@@ -67,7 +67,10 @@ public class AuthController {
                 .build();
 
         userRepository.save(user);
-        return ResponseEntity.ok("User registered successfully");
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+        String token = jwtUtil.generateToken(userDetails);
+        return ResponseEntity.ok(new AuthResponse(token));
+
     }
 
 
@@ -80,20 +83,18 @@ public class AuthController {
             // Try finding by email instead
             userOptional = userRepository.findByEmail(request.getUsername());
         }
-
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-
+            System.out.println("Login request for: " + request.getUsername());
+            System.out.println("User found: " + user.getUsername());
+            System.out.println("Password match: " + passwordEncoder.matches(request.getPassword(), user.getPassword()));
             if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 // ✅ Load full UserDetails object
                 UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-
                 String token = jwtUtil.generateToken(userDetails);
                 return ResponseEntity.ok(new AuthResponse(token));
             }
         }
-
-
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
     }
 
