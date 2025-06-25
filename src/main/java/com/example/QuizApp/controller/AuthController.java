@@ -65,11 +65,9 @@ public class AuthController {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .roles(Collections.singletonList(Role.ROLE_USER))
                 .build();
-
         userRepository.save(user);
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-        String token = jwtUtil.generateToken(userDetails);
-        return ResponseEntity.ok(new AuthResponse(token));
+
+        return ResponseEntity.ok("User registered successfully, Please login");
 
     }
 
@@ -92,7 +90,8 @@ public class AuthController {
                 // ✅ Load full UserDetails object
                 UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
                 String token = jwtUtil.generateToken(userDetails);
-                return ResponseEntity.ok(new AuthResponse(token));
+                return ResponseEntity.ok(new LoginResponse(token, user.getUsername(), user.getEmail(), user.getRoles()));
+
             }
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
@@ -106,7 +105,6 @@ public class AuthController {
         if (userOpt.isEmpty()) {
             return "No user found with this email";
         }
-
         // Optional: delete old tokens
         passwordResetTokenRepository.deleteByEmail(email);
 

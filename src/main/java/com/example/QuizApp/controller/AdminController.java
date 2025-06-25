@@ -1,5 +1,6 @@
 package com.example.QuizApp.controller;
 
+import com.example.QuizApp.dto.AdminQuizSubjectResponse;
 import com.example.QuizApp.model.Question;
 import com.example.QuizApp.model.Quiz;
 import com.example.QuizApp.model.User;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/admin")
@@ -29,7 +31,7 @@ public class AdminController {
         return quizRepository.save(quiz);
     }
 
-    // Add questions to existing quiz
+    // Add questions to existing quiz (only 1-1 que can be added)
     @PutMapping("/addQuestion/{quizId}")
     public Quiz addQuestion(@PathVariable String quizId, @RequestBody Question question) {
         Optional<Quiz> quizOpt = quizRepository.findById(quizId);
@@ -51,8 +53,17 @@ public class AdminController {
 
     // Get all quizzes (for admin)
     @GetMapping("/quizzes")
-    public List<Quiz> getAllQuizzes() {
-        return quizRepository.findAll();
+    public List<AdminQuizSubjectResponse> getQuizSubjectsOnly() {
+        return quizRepository.findAll().stream()
+                .map(quiz -> new AdminQuizSubjectResponse(quiz.getId(), quiz.getSubject()))
+                .collect(Collectors.toList());
+    }
+
+    // ✅ Return full quiz with questions
+    @GetMapping("/quiz/{quizId}")
+    public Quiz getQuizById(@PathVariable String quizId) {
+        return quizRepository.findById(quizId)
+                .orElseThrow(() -> new RuntimeException("Quiz not found"));
     }
 
     @GetMapping("/users")
