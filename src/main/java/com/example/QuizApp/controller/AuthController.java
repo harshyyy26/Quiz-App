@@ -86,9 +86,9 @@ public class AuthController {
                 // ✅ Load full UserDetails object
                 UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
                 String token = jwtUtil.generateToken(userDetails);
-                return ResponseEntity.ok(
-                        new LoginResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getRoles())
-                );
+                UserDTO userDTO = new UserDTO(user.getId(), user.getUsername(), user.getEmail(), user.getRoles());
+                return ResponseEntity.ok(new AuthResponse(token, userDTO));
+
             }
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");

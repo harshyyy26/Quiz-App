@@ -172,12 +172,10 @@ public class UserController {
                     return new LeaderboardEntry(
                             user.getUsername() != null ? user.getUsername() : "Unknown",
                             attempt.getScore(),
-                            attempt.getTotalQuestions()
+                            attempt.getTotalQuestions(),
+                            attempt.getAttemptedAt()
                     );
                 })
                 .toList();
     }
-
-
-
 }
