@@ -90,8 +90,9 @@ public class AuthController {
                 // ✅ Load full UserDetails object
                 UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
                 String token = jwtUtil.generateToken(userDetails);
-                return ResponseEntity.ok(new LoginResponse(token, user.getUsername(), user.getEmail(), user.getRoles()));
-
+                return ResponseEntity.ok(
+                        new LoginResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getRoles())
+                );
             }
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
@@ -125,19 +126,16 @@ public class AuthController {
     public String resetPassword(@RequestBody PasswordResetRequest request) {
         PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
                 .orElseThrow(() -> new RuntimeException("Invalid or expired token"));
-
         if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
             return "Token has expired";
         }
+//        System.out.println("Received reset token: " + request.getToken());
 
         User user = userRepository.findByEmail(resetToken.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
-
         passwordResetTokenRepository.delete(resetToken); // Remove token after use
-
         return "Password successfully reset. Please log in with your new password.";
     }
 

@@ -11,9 +11,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -28,8 +31,13 @@ public class AdminController {
     // Add a new quiz subject
     @PostMapping("/addQuiz")
     public Quiz addQuiz(@RequestBody Quiz quiz) {
+        if (quiz.getQuestions() == null) {
+            quiz.setQuestions(new ArrayList<>());
+        }
+        System.out.println("✅ Received Quiz: " + quiz.getSubject());
         return quizRepository.save(quiz);
     }
+
 
     // Add questions to existing quiz (only 1-1 que can be added)
     @PutMapping("/addQuestion/{quizId}")
@@ -43,6 +51,63 @@ public class AdminController {
             throw new RuntimeException("Quiz not found");
         }
     }
+
+    //updating question of a particular quiz
+    @PutMapping("/updateQuestion/{quizId}/{questionId}")
+    public Quiz updateQuestion(
+            @PathVariable String quizId,
+            @PathVariable String questionId,
+            @RequestBody Question updatedQuestion
+    ) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new RuntimeException("Quiz not found"));
+
+        System.out.println("Updating Question ID: " + questionId);
+        System.out.println("New data: " + updatedQuestion);
+
+
+        List<Question> questions = quiz.getQuestions();
+        boolean found = false;
+
+        for (int i = 0; i < questions.size(); i++) {
+            Question q = questions.get(i);
+            if (q.getId().equals(questionId)) {
+                // Update fields
+                q.setQuestionText(updatedQuestion.getQuestionText());
+                q.setOptionA(updatedQuestion.getOptionA());
+                q.setOptionB(updatedQuestion.getOptionB());
+                q.setOptionC(updatedQuestion.getOptionC());
+                q.setOptionD(updatedQuestion.getOptionD());
+                q.setCorrectAnswer(updatedQuestion.getCorrectAnswer());
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            throw new RuntimeException("Question not found in the quiz");
+        }
+        return quizRepository.save(quiz);
+    }
+
+    @DeleteMapping("/deleteQuestion/{quizId}/{questionId}")
+    public Quiz deleteQuestion(
+            @PathVariable String quizId,
+            @PathVariable String questionId
+    ) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new RuntimeException("Quiz not found"));
+
+        List<Question> questions = quiz.getQuestions();
+        boolean removed = questions.removeIf(q -> q.getId().equals(questionId));
+
+        if (!removed) {
+            throw new RuntimeException("Question not found in the quiz");
+        }
+
+        quiz.setQuestions(questions); // Update the questions list
+        return quizRepository.save(quiz);
+    }
+
 
     // Delete quiz
     @DeleteMapping("/deleteQuiz/{quizId}")
