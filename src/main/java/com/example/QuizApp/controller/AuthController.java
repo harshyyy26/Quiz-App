@@ -54,11 +54,9 @@ public class AuthController {
         if (userRepository.existsByUsername(request.getUsername())) {
             return ResponseEntity.badRequest().body("Username already exists");
         }
-
         if (userRepository.existsByEmail(request.getEmail())) {
             return ResponseEntity.badRequest().body("Email already exists");
         }
-
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
@@ -66,9 +64,7 @@ public class AuthController {
                 .roles(Collections.singletonList(Role.ROLE_USER))
                 .build();
         userRepository.save(user);
-
         return ResponseEntity.ok("User registered successfully, Please login");
-
     }
 
 
