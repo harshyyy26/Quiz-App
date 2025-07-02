@@ -1,8 +1,12 @@
 package com.example.QuizApp.controller;
 
+import com.example.QuizApp.config.JwtUtil;
 import com.example.QuizApp.dto.AdminQuizSubjectResponse;
+import com.example.QuizApp.dto.AuthResponse;
+import com.example.QuizApp.dto.UserDTO;
 import com.example.QuizApp.model.Question;
 import com.example.QuizApp.model.Quiz;
+import com.example.QuizApp.model.Role;
 import com.example.QuizApp.model.User;
 import com.example.QuizApp.repository.QuizRepository;
 import com.example.QuizApp.repository.UserRepository;
@@ -10,13 +14,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -25,6 +29,10 @@ import java.util.stream.Collectors;
 public class AdminController {
 
     private final QuizRepository quizRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+
+
 
     @Autowired
     private UserRepository userRepository;
@@ -146,6 +154,5 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
         }
     }
-
 
 }
